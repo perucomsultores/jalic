@@ -1,6 +1,7 @@
 (function($, window){
     var idb = window.indexedDB,
         dbReady = $.Deferred(),
+        dbreq,
         db;
 
     /**
@@ -22,7 +23,7 @@
      * @returns {*}
      */
     function createDatabase(idb){
-        var dbreq = idb.open('jalic', 1);
+        dbreq = idb.open('jalic', 1);
 
         /**
          * Something went wrong when opening our db. This could range from the user refusing the
@@ -91,29 +92,30 @@
          * or else resolves with the transaction or request error on failure.
          */
         setItem:function(jdName, data, dataType){
-            var defer = $.Deferred(),
+            var defer = $.Deferred();
+            dbreq.onupgradeneeded = function(event){  // for error in Service Workers, see: https://stackoverflow.com/questions/33709976/uncaught-invalidstateerror-failed-to-execute-transaction-on-idbdatabase-a
                 transaction = db.transaction(['jalicData'], 'readwrite'),
                 objectStore = transaction.objectStore("jalicData"),
                 request;
 
-            dataType = dataType || typeof data;
+                dataType = dataType || typeof data;
 
-            transaction.oncomplete = function(){
-                return defer.resolve();
-            };
+                transaction.oncomplete = function(){
+                    return defer.resolve();
+                };
 
-            transaction.onerror = function(event){
-                console.log(event);
-                return defer.reject(event);
-            };
+                transaction.onerror = function(event){
+                    console.log(event);
+                    return defer.reject(event);
+                };
 
-            request = objectStore.put({jdName:jdName, storedAt:+new Date(), dataType:dataType, data:data});
+                request = objectStore.put({jdName:jdName, storedAt:+new Date(), dataType:dataType, data:data});
 
-            request.onerror = function(event){
-                console.log(event);
-                defer.reject(event);
-            };
-
+                request.onerror = function(event){
+                    console.log(event);
+                    defer.reject(event);
+                };
+            }
             return defer.promise();
         },
         /**
