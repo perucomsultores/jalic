@@ -1,7 +1,6 @@
 (function($, window){
     var idb = window.indexedDB,
         dbReady = $.Deferred(),
-        dbreq,
         db;
 
     /**
@@ -23,7 +22,7 @@
      * @returns {*}
      */
     function createDatabase(idb){
-        dbreq = idb.open('jalic', 1);
+        var dbreq = idb.open('jalic', 1);
 
         /**
          * Something went wrong when opening our db. This could range from the user refusing the
@@ -92,8 +91,8 @@
          * or else resolves with the transaction or request error on failure.
          */
         setItem:function(jdName, data, dataType){
-            var defer = $.Deferred();
-            dbreq.onupgradeneeded = function(event){  // for error in Service Workers, see: https://stackoverflow.com/questions/33709976/uncaught-invalidstateerror-failed-to-execute-transaction-on-idbdatabase-a
+            db.transaction.oncomplete = function(ev){  // for error in Service Workers, see: https://stackoverflow.com/questions/33709976/uncaught-invalidstateerror-failed-to-execute-transaction-on-idbdatabase-a
+                var defer = $.Deferred();
                 transaction = db.transaction(['jalicData'], 'readwrite'),
                 objectStore = transaction.objectStore("jalicData"),
                 request;
@@ -115,8 +114,9 @@
                     console.log(event);
                     defer.reject(event);
                 };
+                
+                return defer.promise();
             }
-            return defer.promise();
         },
         /**
          * Retrieve an item from the jalicData objectStore, using the given jdName as the key.
